@@ -10,4 +10,4 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 // 위 스크립트 로드 후 window.supabase 로 접근 가능
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
