@@ -7,7 +7,7 @@ let currentRecord = null; // 기존 데이터 (수정 시)
 
 // ---- 초기화 ----
 document.addEventListener('DOMContentLoaded', async () => {
-    const session = await Auth.requireRole(['entry']);
+    const session = await Auth.requireRole(['entry', 'viewer']);
     if (!session) return;
     currentUser = session.user;
     Auth.setHeaderUser(session.profile.name, session.profile.role);
