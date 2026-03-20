@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!session) return;
     currentUser = session.user;
     Auth.setHeaderUser(session.profile.name, session.profile.role);
+    if (session.profile.role === 'viewer') {
+        document.getElementById('btn-dashboard').style.display = '';
+    }
 
     // 기본값: 어제
     const dateInput = document.getElementById('entry-date');
