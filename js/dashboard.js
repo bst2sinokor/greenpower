@@ -7,7 +7,7 @@ let phaseConfigs = [];  // phase_config 테이블
 let charts = {};        // Chart.js 인스턴스 저장
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const session = await Auth.requireRole(['entry', 'viewer']);
+    const session = await Auth.requireRole(['viewer']);
     if (!session) return;
     Auth.setHeaderUser(session.profile.name, session.profile.role);
 

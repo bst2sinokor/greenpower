@@ -124,19 +124,12 @@ function getVal(id) { return parseFloat(document.getElementById(id)?.value) || 0
 function updateCalculations() {
     const intakeTotal = getVal('intake_mixed') + getVal('intake_organic') + getVal('intake_inorganic')
         + getVal('intake_construction') + getVal('intake_special');
-    const revenueTotal = getVal('revenue_mixed') + getVal('revenue_organic') + getVal('revenue_inorganic')
-        + getVal('revenue_construction') + getVal('revenue_special');
-    const costTotal = getVal('cost_labor') + getVal('cost_equipment') + getVal('cost_cover_soil')
-        + getVal('cost_leachate') + getVal('cost_other');
-    const profit = revenueTotal - costTotal;
 
-    document.getElementById('total-intake').textContent = intakeTotal.toLocaleString('ko', {maximumFractionDigits: 1});
-    document.getElementById('total-revenue').textContent = revenueTotal.toLocaleString('ko');
-    document.getElementById('total-cost').textContent = costTotal.toLocaleString('ko');
+    const intakeEl = document.getElementById('total-intake');
+    if (intakeEl) intakeEl.textContent = intakeTotal.toLocaleString('ko', {maximumFractionDigits: 1});
 
     const profitEl = document.getElementById('profit-preview');
-    profitEl.textContent = (profit >= 0 ? '+' : '') + profit.toLocaleString('ko') + ' 원';
-    profitEl.style.color = profit >= 0 ? 'var(--accent-dark)' : 'var(--danger)';
+    if (profitEl) { profitEl.textContent = '-'; }
 }
 
 // ---- 저장 ----
