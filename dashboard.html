@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부산그린파워 - 경영 대시보드</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 28px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.isometric-body {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 20px;
+    align-items: start;
+}
+
+.phase-cards { display: flex; flex-direction: column; gap: 10px; }
+
+.phase-info-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+}
+.phase-info-card .phase-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.phase-info-card .phase-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+}
+.phase-info-card .phase-stat span:last-child { font-weight: 600; color: var(--text); }
+.phase-info-card .progress-wrap { margin-top: 6px; }
+
+.detail-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+@media (max-width: 768px) {
+    .isometric-body { grid-template-columns: 1fr; }
+    .ai-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span>🌿 부산그린파워</span>
+        <span class="badge">경영 대시보드</span>
+    </div>
+    <div class="header-right">
+        <span id="user-name">-</span>
+        <button class="btn-logout" onclick="window.location.href='entry.html'" style="background:#f97316;">📋 데이터 입력</button>
+        <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+</header>
+
+<main class="main-container">
+
+    <!-- 기간 선택 -->
+    <div class="control-bar">
+        <label>조회 기간</label>
+        <input type="date" id="sel-start" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">
+        <span style="color:var(--text-muted);font-weight:600;">~</span>
+        <input type="date" id="sel-end" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px;">
+        <button class="btn btn-primary" id="btn-load" style="padding:8px 20px;">조회</button>
+        <span style="flex:1;"></span>
+    </div>
+
+    <!-- KPI 카드 -->
+    <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">총 반입량</div><div class="kpi-value" id="kpi-intake">-<span class="kpi-unit">톤</span></div></div>
+        <div class="kpi-card">
+            <div class="kpi-label">총 반입차량</div>
+            <div class="kpi-value" id="kpi-trucks">-<span class="kpi-unit">대</span></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">일평균 <span id="kpi-trucks-avg" style="font-weight:700;color:var(--text);">-</span> 대</div>
+        </div>
+        <div class="kpi-card"><div class="kpi-label">총 매립량</div><div class="kpi-value" id="kpi-landfill">-<span class="kpi-unit">톤</span></div></div>
+        <div class="kpi-card"><div class="kpi-label">운영 일수</div><div class="kpi-value" id="kpi-days">-<span class="kpi-unit">일</span></div></div>
+        <div class="kpi-card"><div class="kpi-label">총 매출액</div><div class="kpi-value" id="kpi-revenue">-<span class="kpi-unit">원</span></div><div style="font-size:10px;color:var(--text-muted);margin-top:5px;">(VAT 별도)</div></div>
+    </div>
+
+    <!-- 아이소메트릭 매립 현황 -->
+    <h2 class="section-title">🏗 매립 부지 현황(현재 기준)</h2>
+    <div class="card" style="margin-bottom:24px;">
+        <div class="card-body" style="padding:20px;">
+            <div class="isometric-body">
+                <div id="iso-container"></div>
+                <div class="phase-cards" id="phase-cards">
+                    <!-- JS로 채움 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 차트 4개 -->
+    <h2 class="section-title">📊 월별 추이 분석</h2>
+    <div class="charts-grid">
+        <div class="chart-container">
+            <div class="chart-title">📦 반입량 추이 (톤)</div>
+            <canvas id="chart-intake" height="200"></canvas>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">🥧 폐기물 유형별 비율</div>
+            <canvas id="chart-type" height="200"></canvas>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">💹 월간 매출 추이 (원)</div>
+            <canvas id="chart-pnl" height="200"></canvas>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">🌊 침출수 유입 / 처리량 (톤)</div>
+            <canvas id="chart-env" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- 일별 상세 테이블 -->
+    <h2 class="section-title">📅 일별 상세 실적</h2>
+    <div class="detail-table-wrap">
+        <table class="data-table" id="detail-table">
+            <thead>
+                <tr>
+                    <th>날짜</th>
+                    <th>총반입량(톤)</th>
+                    <th>매출(원)</th>
+                    <th>차량(대)</th>
+                    <th style="width:40%;">비고</th>
+                </tr>
+            </thead>
+            <tbody id="detail-tbody">
+                <tr><td colspan="8" class="no-data">기간을 선택하고 조회하세요.</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 0;"></div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/isometric.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
