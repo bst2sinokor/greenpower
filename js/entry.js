@@ -67,6 +67,9 @@ function moveDay(delta) {
 async function loadDateData(dateStr) {
     clearFormFields();
     currentRecord = null;
+    prevCumulative = [0, 0, 0, 0];
+    prevLeachateRemaining = 0;
+    updateCalculations(); // 날짜 전환 즉시 합계 초기화
 
     const { data, error } = await supabase
         .from('daily_operations')
