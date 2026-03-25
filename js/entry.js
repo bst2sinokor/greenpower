@@ -128,7 +128,7 @@ function fillForm(data) {
         const el = document.getElementById(f);
         if (el && data[f] != null) {
             el.value = data[f];
-            if (f !== 'memo') applyCommaFormat(el);
+            if (f !== 'memo' && el.type !== 'hidden') applyCommaFormat(el);
         }
     });
 }
