@@ -73,6 +73,19 @@
 @media (max-width: 768px) {
     .isometric-body { grid-template-columns: 1fr; }
     .ai-grid { grid-template-columns: 1fr; }
+    .detail-table-wrap { font-size: 12px; }
+    .data-table th, .data-table td { padding: 8px 8px; }
+}
+
+@media (max-width: 480px) {
+    .isometric-body { padding: 12px; gap: 12px; }
+    .section-title { font-size: 14px; }
+    #pagination { flex-wrap: wrap; gap: 4px; padding: 12px 0; }
+    #pagination button { padding: 5px 9px !important; font-size: 12px !important; }
+    .control-bar input[type="date"] { font-size: 13px; }
+    .detail-table-wrap { border-radius: 8px; }
+    .data-table th:nth-child(5),
+    .data-table td:nth-child(5) { display: none; }
 }
 </style>
 </head>
