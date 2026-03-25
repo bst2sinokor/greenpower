@@ -346,9 +346,11 @@ function renderDetailTable(page) {
     html += `<button ${btnStyle(false)} onclick="renderDetailTable(1)" ${currentPage===1?'disabled':''}>«</button>`;
     html += `<button ${btnStyle(false)} onclick="renderDetailTable(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
 
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
-    startPage = Math.max(1, endPage - 4);
+    const isMobile = window.innerWidth <= 480;
+    const pageWindow = isMobile ? 1 : 2; // 모바일: 현재±1(3개), 데스크탑: 현재±2(5개)
+    let startPage = Math.max(1, currentPage - pageWindow);
+    let endPage = Math.min(totalPages, startPage + pageWindow * 2);
+    startPage = Math.max(1, endPage - pageWindow * 2);
     for (let i = startPage; i <= endPage; i++) {
         html += `<button ${btnStyle(i===currentPage)} onclick="renderDetailTable(${i})">${i}</button>`;
     }
