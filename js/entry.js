@@ -96,7 +96,7 @@ async function loadDateData(dateStr) {
     );
 
     // 전날 침출수 잔량 로드
-    const prevDate = new Date(dateStr + 'T00:00:00');
+    const prevDate = new Date(dateStr); // UTC 기준 파싱 (로컬타임 변환 방지)
     prevDate.setDate(prevDate.getDate() - 1);
     const prevDateStr = prevDate.toISOString().split('T')[0];
     const { data: prevDay } = await supabase
