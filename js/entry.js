@@ -98,16 +98,14 @@ async function loadDateData(dateStr) {
         (prevRows || []).reduce((s, d) => s + (d[`phase${n}_used_m3`] || 0), 0)
     );
 
-    // 전날 침출수 잔량 로드
-    const prevDate = new Date(dateStr); // UTC 기준 파싱 (로컬타임 변환 방지)
-    prevDate.setDate(prevDate.getDate() - 1);
-    const prevDateStr = prevDate.toISOString().split('T')[0];
-    const { data: prevDay } = await supabase
+    // 이전 날짜 전체의 유입량 - 처리량 합산으로 침출수 잔량 계산
+    const { data: leachateRows } = await supabase
         .from('daily_operations')
-        .select('gas_methane_ppm')
-        .eq('entry_date', prevDateStr)
-        .single();
-    prevLeachateRemaining = prevDay?.gas_methane_ppm || 0;
+        .select('leachate_generated_m3, leachate_treated_m3')
+        .lt('entry_date', dateStr);
+    prevLeachateRemaining = (leachateRows || []).reduce(
+        (sum, row) => sum + (row.leachate_generated_m3 || 0) - (row.leachate_treated_m3 || 0), 0
+    );
 
     updateCalculations();
 }
