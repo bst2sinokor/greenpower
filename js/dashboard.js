@@ -272,14 +272,20 @@ function renderCharts() {
         options: chartOpts('원')
     });
 
-    // 4. 침출수 유입/처리량 (라인)
+    // 4. 침출수 유입/처리량/잔량 (라인)
+    let leachateRunning = 0;
+    const leachateRemainingData = allData.map(d => {
+        leachateRunning += (d.leachate_generated_m3 || 0) - (d.leachate_treated_m3 || 0);
+        return Math.round(leachateRunning);
+    });
     charts.env = new Chart(document.getElementById('chart-env'), {
         type: 'line',
         data: {
             labels,
             datasets: [
                 { label: '침출수 유입량', data: allData.map(d => d.leachate_generated_m3||0), borderColor: '#f59e0b', tension: 0.3, pointRadius: 3 },
-                { label: '침출수 처리량', data: allData.map(d => d.leachate_treated_m3||0), borderColor: '#3b82f6', tension: 0.3, pointRadius: 3 }
+                { label: '침출수 처리량', data: allData.map(d => d.leachate_treated_m3||0), borderColor: '#3b82f6', tension: 0.3, pointRadius: 3 },
+                { label: '침출수 잔량', data: leachateRemainingData, borderColor: '#ef4444', tension: 0.3, pointRadius: 3, borderDash: [5,3] }
             ]
         },
         options: chartOpts('톤')
