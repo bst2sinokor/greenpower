@@ -340,8 +340,10 @@ function renderDetailTable(page) {
     html += `<button ${btnStyle(false)} onclick="renderDetailTable(1)" ${currentPage===1?'disabled':''}>«</button>`;
     html += `<button ${btnStyle(false)} onclick="renderDetailTable(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
 
-    const range = 2;
-    for (let i = Math.max(1, currentPage - range); i <= Math.min(totalPages, currentPage + range); i++) {
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    startPage = Math.max(1, endPage - 4);
+    for (let i = startPage; i <= endPage; i++) {
         html += `<button ${btnStyle(i===currentPage)} onclick="renderDetailTable(${i})">${i}</button>`;
     }
 
