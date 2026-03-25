@@ -5,6 +5,7 @@
 let currentUser = null;
 let currentRecord = null; // 기존 데이터 (수정 시)
 let prevCumulative = [0, 0, 0, 0]; // 선택 날짜 이전까지의 공구별 누적 (당일 제외)
+let prevLeachateRemaining = 0; // 전날 침출수 잔량
 
 // ---- 초기화 ----
 document.addEventListener('DOMContentLoaded', async () => {
@@ -93,6 +94,17 @@ async function loadDateData(dateStr) {
     prevCumulative = [1,2,3,4].map(n =>
         (prevRows || []).reduce((s, d) => s + (d[`phase${n}_used_m3`] || 0), 0)
     );
+
+    // 전날 침출수 잔량 로드
+    const prevDate = new Date(dateStr + 'T00:00:00');
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevDateStr = prevDate.toISOString().split('T')[0];
+    const { data: prevDay } = await supabase
+        .from('daily_operations')
+        .select('gas_methane_ppm')
+        .eq('entry_date', prevDateStr)
+        .single();
+    prevLeachateRemaining = prevDay?.gas_methane_ppm || 0;
 
     updateCalculations();
 }
@@ -208,8 +220,8 @@ function updateCalculations() {
     const revenueEl = document.getElementById('total-revenue');
     if (revenueEl) revenueEl.textContent = revenueTotal.toLocaleString('ko');
 
-    // 침출수 잔량 자동계산 (원수 유입량 - 원수 처리량)
-    const leachateRemaining = getVal('leachate_generated_m3') - getVal('leachate_treated_m3');
+    // 침출수 잔량 자동계산 (전날 잔량 + 유입량 - 처리량)
+    const leachateRemaining = prevLeachateRemaining + getVal('leachate_generated_m3') - getVal('leachate_treated_m3');
     const leachateEl = document.getElementById('leachate-remaining');
     if (leachateEl) leachateEl.textContent = leachateRemaining.toLocaleString('ko', {maximumFractionDigits: 1});
     const hiddenEl = document.getElementById('gas_methane_ppm');
