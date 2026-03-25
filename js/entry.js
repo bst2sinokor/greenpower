@@ -202,7 +202,7 @@ function updateCalculations() {
         + getVal('intake_construction') + getVal('intake_special');
 
     const intakeEl = document.getElementById('total-intake');
-    if (intakeEl) intakeEl.textContent = intakeTotal.toLocaleString('ko', {maximumFractionDigits: 1});
+    if (intakeEl) intakeEl.textContent = Math.round(intakeTotal).toLocaleString('ko');
 
     const trucksEl = document.getElementById('total-trucks');
     if (trucksEl) trucksEl.textContent = Math.round(getVal('truck_count'));
@@ -212,7 +212,7 @@ function updateCalculations() {
         const el = document.getElementById(`cum-phase${n}`);
         if (el) {
             const total = prevCumulative[i] + getVal(`phase${n}_used_m3`);
-            el.textContent = total.toLocaleString('ko', {maximumFractionDigits: 1});
+            el.textContent = Math.round(total).toLocaleString('ko');
         }
     });
 
