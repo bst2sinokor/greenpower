@@ -81,6 +81,10 @@ body {
     --accent-dark: #ea580c;
 }
 
+@media (max-width: 480px) {
+    .form-grid-2col { grid-template-columns: 1fr 1fr !important; }
+}
+
 @media (max-width: 600px) {
     .entry-header-bar { gap: 10px; padding: 10px 14px; }
     .entry-header-bar h2 { font-size: 13px; width: 100%; }
@@ -149,7 +153,7 @@ body {
                 반입량 현황(당일)
             </div>
             <div class="card-body">
-                <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+                <div class="form-grid form-grid-2col" style="grid-template-columns:1fr 1fr;">
                     <div class="form-group">
                         <label>폐수처리오니 <span class="unit">(톤)</span></label>
                         <input type="text" inputmode="numeric" id="intake_mixed" min="0" step="0.1" placeholder="0.0">
@@ -259,8 +263,7 @@ body {
                     </div>
                 </div>
                 <input type="hidden" id="gas_methane_ppm">
-                <div style="flex:1;min-height:20px;"></div>
-                <div class="total-row">
+                <div class="total-row" style="margin-top:20px;">
                     <span class="label">침출수 잔량</span>
                     <span class="value"><span id="leachate-remaining">0.0</span> 톤</span>
                 </div>
@@ -288,8 +291,7 @@ body {
                         <input type="text" inputmode="numeric" id="revenue_transport" min="0" step="1" placeholder="0">
                     </div>
                 </div>
-                <div style="flex:1;min-height:20px;"></div>
-                <div class="total-row">
+                <div class="total-row" style="margin-top:20px;">
                     <span class="label">당일 매출총액</span>
                     <span class="value"><span id="total-revenue">0</span> 원 <span style="font-size:11px;font-weight:400;color:#92400e;">(VAT별도)</span></span>
                 </div>
