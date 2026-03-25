@@ -85,10 +85,10 @@ function renderKPI() {
     const totalLandfill = sum('landfill_daily');
     const totalRevenue = sum('revenue_total');
 
-    setKPI('kpi-intake', fmt(totalIntake, 1), '톤');
+    setKPI('kpi-intake', fmt(totalIntake, 0), '톤');
     setKPI('kpi-trucks', fmt(totalTrucks, 0), '대');
     const avgEl = document.getElementById('kpi-trucks-avg');
-    if (avgEl) avgEl.textContent = fmt(avgTrucks, 1);
+    if (avgEl) avgEl.textContent = fmt(avgTrucks, 0);
     setKPI('kpi-landfill', fmt(totalLandfill, 0), '톤');
     setKPI('kpi-days', allData.length, '일');
     setKPI('kpi-revenue', fmt(totalRevenue, 0), '원');
@@ -149,17 +149,17 @@ function renderPhaseCards(phases) {
         </div>
         <div class="phase-stat" style="color:rgba(255,255,255,0.8);">
             <span>총 허가량</span>
-            <span style="font-weight:700;color:white;">${fmt(totalPermit, 1)} <small style="font-weight:400;opacity:0.7">톤</small></span>
+            <span style="font-weight:700;color:white;">${fmt(totalPermit, 0)} <small style="font-weight:400;opacity:0.7">톤</small></span>
         </div>
         <div class="phase-stat" style="color:rgba(255,255,255,0.8);">
             <span>총 기 매립량</span>
-            <span style="font-weight:700;color:#fde047;">${fmt(totalUsed, 1)} <small style="font-weight:400">톤</small>
+            <span style="font-weight:700;color:#fde047;">${fmt(totalUsed, 0)} <small style="font-weight:400">톤</small>
                 <span style="font-size:12px;font-weight:800;color:#fff176;"> (${totalPct1}%)</span>
             </span>
         </div>
         <div class="phase-stat" style="color:rgba(255,255,255,0.8);">
             <span>총 잔여량</span>
-            <span style="font-weight:700;color:#4ade80;">${fmt(totalRemain, 1)} <small style="font-weight:400">톤</small>
+            <span style="font-weight:700;color:#4ade80;">${fmt(totalRemain, 0)} <small style="font-weight:400">톤</small>
                 <span style="font-size:12px;font-weight:800;color:#86efac;"> (${totalRemPct1}%)</span>
             </span>
         </div>
@@ -186,17 +186,17 @@ function renderPhaseCards(phases) {
             </div>
             <div class="phase-stat">
                 <span>허가량</span>
-                <span style="font-weight:600;">${fmt(p.total, 1)} <small style="font-weight:400;color:var(--text-muted)">톤</small></span>
+                <span style="font-weight:600;">${fmt(p.total, 0)} <small style="font-weight:400;color:var(--text-muted)">톤</small></span>
             </div>
             <div class="phase-stat">
                 <span>기 매립량</span>
-                <span style="font-weight:700;color:${pctColor}">${fmt(p.used, 1)} <small style="font-weight:400">톤</small>
+                <span style="font-weight:700;color:${pctColor}">${fmt(p.used, 0)} <small style="font-weight:400">톤</small>
                     <span style="font-size:10px;color:${pctColor};">(${pct1}%)</span>
                 </span>
             </div>
             <div class="phase-stat">
                 <span>잔여량</span>
-                <span style="font-weight:700;color:var(--accent-dark)">${fmt(remaining, 1)} <small style="font-weight:400">톤</small>
+                <span style="font-weight:700;color:var(--accent-dark)">${fmt(remaining, 0)} <small style="font-weight:400">톤</small>
                     <span style="font-size:10px;color:var(--accent-dark);">(${remPct1}%)</span>
                 </span>
             </div>
@@ -325,7 +325,7 @@ function renderDetailTable(page) {
         const rev = d.revenue_total || 0;
         return `<tr>
             <td>${d.entry_date}</td>
-            <td class="num">${fmt(d.intake_total||0, 1)}</td>
+            <td class="num">${fmt(d.intake_total||0, 0)}</td>
             <td class="num">${fmt(rev, 0)}</td>
             <td class="num">${d.truck_count||0}</td>
             <td style="font-size:12px;color:var(--text-muted);" title="${d.memo||''}">${d.memo||'-'}</td>
