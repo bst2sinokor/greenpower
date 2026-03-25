@@ -594,7 +594,8 @@ body {
     .kpi-card { padding: 12px 14px; }
     .control-bar { gap: 6px; padding: 10px 12px; }
     .control-bar > label { display: none; }
-    .control-bar input[type="date"] { font-size: 13px; padding: 6px 8px; min-width: 0; flex: 1; }
+    .control-bar > span[style*="flex:1"] { display: none; }
+    .control-bar input[type="date"] { font-size: 13px; padding: 6px 8px; width: 130px; }
     .total-row .value { font-size: 15px; }
     .card-body { padding: 14px; }
     .charts-grid { gap: 12px; }
