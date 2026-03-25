@@ -592,11 +592,11 @@ body {
     .form-grid { grid-template-columns: 1fr !important; }
     .kpi-value { font-size: 17px; }
     .kpi-card { padding: 12px 14px; }
-    .control-bar { gap: 6px; padding: 10px 12px; flex-wrap: nowrap; }
+    .control-bar { display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 6px; padding: 10px 12px; }
     .control-bar > label { display: none; }
     .control-bar > span:last-child { display: none; }
-    .control-bar input[type="date"] { flex: 1; min-width: 0; font-size: 13px; padding: 6px 6px; }
-    .control-bar .btn { flex-shrink: 0; padding: 7px 14px; font-size: 13px; }
+    .control-bar input[type="date"] { width: 100%; font-size: 13px; padding: 6px 4px; }
+    .control-bar .btn { white-space: nowrap; padding: 7px 14px; font-size: 13px; }
     .total-row .value { font-size: 15px; }
     .card-body { padding: 14px; }
     .charts-grid { gap: 12px; }
