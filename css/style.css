@@ -53,6 +53,8 @@ body {
     gap: 10px;
     font-size: 16px;
     font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .app-header .logo .badge {
@@ -85,6 +87,8 @@ body {
     font-size: 12px;
     font-family: inherit;
     transition: background 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .btn-logout:hover { background: rgba(255,255,255,0.25); }
 
@@ -581,13 +585,16 @@ body {
 
 @media (max-width: 480px) {
     .app-header .logo .badge { display: none; }
+    .app-header .logo { font-size: 13px; }
+    .app-header .header-right { gap: 6px; }
+    .pc-only { display: none; }
     .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
     .form-grid { grid-template-columns: 1fr !important; }
     .kpi-value { font-size: 17px; }
     .kpi-card { padding: 12px 14px; }
-    .control-bar { flex-direction: column; align-items: stretch; }
-    .control-bar label { margin-bottom: -4px; }
-    .control-bar input[type="date"] { width: 100%; }
+    .control-bar { gap: 6px; padding: 10px 12px; }
+    .control-bar > label { display: none; }
+    .control-bar input[type="date"] { font-size: 13px; padding: 6px 8px; min-width: 0; flex: 1; }
     .total-row .value { font-size: 15px; }
     .card-body { padding: 14px; }
     .charts-grid { gap: 12px; }
