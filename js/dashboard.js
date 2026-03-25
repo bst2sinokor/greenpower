@@ -332,8 +332,8 @@ function renderDetailTable(page) {
         return `<tr>
             <td>${d.entry_date}</td>
             <td class="num">${fmt(d.intake_total||0, 0)}</td>
-            <td class="num">${fmt(rev, 0)}</td>
             <td class="num">${d.truck_count||0}</td>
+            <td class="num">${fmt(rev, 0)}</td>
             <td style="font-size:12px;color:var(--text-muted);" title="${d.memo||''}">${d.memo||'-'}</td>
         </tr>`;
     }).join('');
