@@ -1,282 +1,336 @@
-// ================================================
-// 일일 데이터 입력 로직
-// ================================================
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부산그린파워 - 일일 데이터 입력</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.entry-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+}
+.entry-header-bar h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-right: auto;
+}
+.date-nav { display: flex; align-items: center; gap: 8px; }
+.date-nav button {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+.date-nav button:hover { background: #e2e8f0; }
+.date-nav input[type="date"] {
+    padding: 7px 12px;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+}
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.status-badge.new { background: #ffedd5; color: #c2410c; }
+.status-badge.edit { background: #fef9c3; color: #854d0e; }
 
-let currentUser = null;
-let currentRecord = null; // 기존 데이터 (수정 시)
-let prevCumulative = [0, 0, 0, 0]; // 선택 날짜 이전까지의 공구별 누적 (당일 제외)
-let prevLeachateRemaining = 0; // 전날 침출수 잔량
+.sections-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+@media (max-width: 900px) { .sections-grid { grid-template-columns: 1fr; } }
 
-// ---- 초기화 ----
-document.addEventListener('DOMContentLoaded', async () => {
-    const session = await Auth.requireRole(['entry', 'viewer']);
-    if (!session) return;
-    currentUser = session.user;
-    Auth.setHeaderUser(session.profile.name, session.profile.role);
-    if (session.profile.role === 'viewer') {
-        document.getElementById('btn-dashboard').style.display = '';
-    }
+.section-full { grid-column: 1 / -1; }
 
-    // 기본값: 어제
-    const dateInput = document.getElementById('entry-date');
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yd = yesterday.toISOString().split('T')[0];
-    dateInput.value = yd;
-    dateInput.max = getTodayStr(); // 미래 날짜 입력 불가
-
-    await loadDateData(dateInput.value);
-
-    // 날짜 변경 이벤트
-    dateInput.addEventListener('change', () => loadDateData(dateInput.value));
-    document.getElementById('btn-prev-day').addEventListener('click', () => moveDay(-1));
-    document.getElementById('btn-next-day').addEventListener('click', () => moveDay(1));
-
-    // 콤마 포맷 (합계 계산보다 먼저 등록해야 getVal이 정상 동작)
-    setupCommaFormat();
-
-    // 공구별 입력 시 누적 실시간 반영
-    [1,2,3,4].forEach(n => {
-        const el = document.getElementById(`phase${n}_used_m3`);
-        if (el) el.addEventListener('input', updateCalculations);
-    });
-
-    // 합계 실시간 계산
-    setupAutoCalc();
-
-    // 저장/초기화
-    document.getElementById('btn-save').addEventListener('click', saveData);
-    document.getElementById('btn-clear').addEventListener('click', clearForm);
-});
-
-function getTodayStr() {
-    return new Date().toISOString().split('T')[0];
+.submit-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 0;
 }
 
-function moveDay(delta) {
-    const dateInput = document.getElementById('entry-date');
-    const d = new Date(dateInput.value);
-    d.setDate(d.getDate() + delta);
-    const newDate = d.toISOString().split('T')[0];
-    if (newDate > getTodayStr()) return; // 미래 이동 불가
-    dateInput.value = newDate;
-    loadDateData(newDate);
+/* ---- 데이터입력 페이지 주황 테마 오버라이드 ---- */
+body {
+    --accent: #f97316;
+    --accent-dark: #ea580c;
 }
 
-// ---- 날짜별 기존 데이터 로드 ----
-async function loadDateData(dateStr) {
-    clearFormFields();
-    currentRecord = null;
-    prevCumulative = [0, 0, 0, 0];
-    prevLeachateRemaining = 0;
-    updateCalculations(); // 날짜 전환 즉시 합계 초기화
-
-    const { data, error } = await supabase
-        .from('daily_operations')
-        .select('*')
-        .eq('entry_date', dateStr)
-        .single();
-
-    const statusBadge = document.getElementById('entry-status');
-    if (data && !error) {
-        // 기존 데이터 → 수정 모드
-        currentRecord = data;
-        fillForm(data);
-        statusBadge.textContent = '✎ 수정 모드';
-        statusBadge.className = 'status-badge edit';
-    } else {
-        statusBadge.textContent = '● 신규 입력';
-        statusBadge.className = 'status-badge new';
-    }
-
-    // 선택 날짜 이전까지의 누적 로드 (당일 제외)
-    const { data: prevRows } = await supabase
-        .from('daily_operations')
-        .select('phase1_used_m3, phase2_used_m3, phase3_used_m3, phase4_used_m3')
-        .lt('entry_date', dateStr);
-    prevCumulative = [1,2,3,4].map(n =>
-        (prevRows || []).reduce((s, d) => s + (d[`phase${n}_used_m3`] || 0), 0)
-    );
-
-    // 이전 날짜 전체의 유입량 - 처리량 합산으로 침출수 잔량 계산
-    const { data: leachateRows } = await supabase
-        .from('daily_operations')
-        .select('leachate_generated_m3, leachate_treated_m3')
-        .lt('entry_date', dateStr);
-    prevLeachateRemaining = (leachateRows || []).reduce(
-        (sum, row) => sum + (row.leachate_generated_m3 || 0) - (row.leachate_treated_m3 || 0), 0
-    );
-
-    updateCalculations();
+@media (max-width: 480px) {
+    .form-grid-2col { grid-template-columns: 1fr 1fr !important; }
 }
 
-// ---- 폼 채우기 ----
-const FIELDS = [
-    'intake_mixed', 'intake_organic', 'intake_inorganic', 'intake_construction', 'intake_special',
-    'truck_count',
-    'phase1_used_m3', 'phase2_used_m3', 'phase3_used_m3', 'phase4_used_m3',
-    'revenue_processing', 'revenue_loading', 'revenue_transport',
-    'cost_labor', 'cost_equipment', 'cost_cover_soil', 'cost_leachate', 'cost_other',
-    'leachate_generated_m3', 'leachate_treated_m3', 'gas_methane_ppm',
-    'memo'
-];
-
-function fillForm(data) {
-    FIELDS.forEach(f => {
-        const el = document.getElementById(f);
-        if (el && data[f] != null) {
-            el.value = data[f];
-            if (f !== 'memo' && el.type !== 'hidden') applyCommaFormat(el);
-        }
-    });
+@media (max-width: 600px) {
+    .entry-header-bar { gap: 10px; padding: 10px 14px; }
+    .entry-header-bar h2 { font-size: 13px; width: 100%; }
+    .date-nav button { padding: 5px 8px; font-size: 12px; }
+    .date-nav input[type="date"] { font-size: 12px; padding: 5px 8px; }
+    .sections-grid { grid-template-columns: 1fr; gap: 12px; }
+    .submit-bar { padding: 12px 0; }
+    .submit-bar .btn-primary { flex: 1; justify-content: center; }
 }
 
-function clearFormFields() {
-    FIELDS.forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.value = f === 'memo' ? '' : '';
-    });
+.btn-primary {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow: 0 2px 8px rgba(249,115,22,0.35);
+}
+.btn-primary:hover {
+    box-shadow: 0 4px 12px rgba(249,115,22,0.45);
 }
 
-function clearForm() {
-    if (!confirm('입력한 내용을 모두 초기화하시겠습니까?')) return;
-    clearFormFields();
-    currentRecord = null;
-    updateCalculations();
+.total-row {
+    background: linear-gradient(135deg, #fff7ed, #ffedd5);
+    border-color: #fdba74;
 }
 
-// ---- 자동 합계 계산 ----
-function setupAutoCalc() {
-    const intakeFields = ['intake_mixed', 'intake_organic', 'intake_inorganic', 'intake_construction', 'intake_special'];
-    const revenueFields = ['revenue_mixed', 'revenue_organic', 'revenue_inorganic', 'revenue_construction', 'revenue_special',
-        'revenue_processing', 'revenue_loading', 'revenue_transport'];
-    const costFields = ['cost_labor', 'cost_equipment', 'cost_cover_soil', 'cost_leachate', 'cost_other'];
-    const leachateFields = ['leachate_generated_m3', 'leachate_treated_m3'];
-    const allFields = [...intakeFields, ...revenueFields, ...costFields, ...leachateFields, 'truck_count'];
-
-    allFields.forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.addEventListener('input', updateCalculations);
-    });
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
 }
 
-// ---- 콤마 포맷 ----
-function toComma(val) {
-    const s = String(val).replace(/[^0-9.]/g, '');
-    const [int, dec] = s.split('.');
-    const formatted = (int || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return dec !== undefined ? formatted + '.' + dec : formatted;
+@media (min-width: 901px) {
+    .push-bottom { margin-top: auto !important; }
 }
+</style>
+</head>
+<body>
 
-function applyCommaFormat(el) {
-    const cursorPos = el.selectionStart;
-    const oldValue = el.value;
-    const rawBeforeCursor = oldValue.slice(0, cursorPos).replace(/,/g, '').length;
-    const raw = oldValue.replace(/,/g, '');
-    if (!raw) return;
-    const formatted = toComma(raw);
-    if (oldValue === formatted) return;
-    el.value = formatted;
-    let count = 0, newPos = formatted.length;
-    for (let i = 0; i < formatted.length; i++) {
-        if (formatted[i] !== ',') count++;
-        if (count === rawBeforeCursor) { newPos = i + 1; break; }
-    }
-    el.setSelectionRange(newPos, newPos);
-}
+<header class="app-header">
+    <div class="logo">
+        <span>🌿 부산그린파워</span>
+        <span class="badge" style="background:#f97316;color:white;">데이터 입력</span>
+    </div>
+    <div class="header-right">
+        <span id="user-name">-</span>
+        <button id="btn-dashboard" class="btn-logout" onclick="window.location.href='dashboard.html'" style="background:#10b981;display:none;">📊 <span class="pc-only">경영 </span>대시보드</button>
+        <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+</header>
 
-function setupCommaFormat() {
-    FIELDS.filter(f => f !== 'memo').forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.addEventListener('input', () => applyCommaFormat(el));
-    });
-}
+<main class="main-container">
 
-function getVal(id) {
-    const raw = (document.getElementById(id)?.value || '').replace(/,/g, '');
-    return parseFloat(raw) || 0;
-}
+    <!-- 날짜 선택 바 -->
+    <div class="entry-header-bar">
+        <h2>일일 운영 실적 입력</h2>
+        <div class="date-nav">
+            <button id="btn-prev-day">◀ 전날</button>
+            <input type="date" id="entry-date">
+            <button id="btn-next-day">다음날 ▶</button>
+        </div>
+        <div class="status-badge new" id="entry-status">● 신규 입력</div>
+    </div>
 
-function updateCalculations() {
-    const intakeTotal = getVal('intake_mixed') + getVal('intake_organic') + getVal('intake_inorganic')
-        + getVal('intake_construction') + getVal('intake_special');
+    <!-- 섹션 2열 그리드 -->
+    <div class="sections-grid">
 
-    const intakeEl = document.getElementById('total-intake');
-    if (intakeEl) intakeEl.textContent = Math.round(intakeTotal).toLocaleString('ko');
+        <!-- 섹션 1: 반입량 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon">♻</div>
+                반입량 현황(당일)
+            </div>
+            <div class="card-body">
+                <div class="form-grid form-grid-2col" style="grid-template-columns:1fr 1fr;">
+                    <div class="form-group">
+                        <label>폐수처리오니 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="intake_mixed" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>폐토사 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="intake_organic" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>분진 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="intake_inorganic" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>소각재 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="intake_construction" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>기타 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="intake_special" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>차량 대수 <span class="unit">(대)</span></label>
+                        <input type="text" inputmode="numeric" id="truck_count" min="0" step="1" placeholder="0">
+                    </div>
+                </div>
+                <div class="total-row" style="margin-top:20px;">
+                    <span class="label">총 반입량</span>
+                    <span class="value"><span id="total-intake">0.0</span> 톤 &nbsp;(<span id="total-trucks">0</span> 대)</span>
+                </div>
+            </div>
+        </div>
 
-    const trucksEl = document.getElementById('total-trucks');
-    if (trucksEl) trucksEl.textContent = Math.round(getVal('truck_count'));
+        <!-- 섹션 2: 구역별 매립 현황 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon">🏗</div>
+                공구별 당일 매립량
+            </div>
+            <div class="card-body">
+                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+                    각 공구에 <strong>오늘 매립된 양</strong>을 입력하세요. 누적은 자동 계산됩니다.
+                </p>
+                <div class="form-grid form-grid-2col" style="grid-template-columns:1fr 1fr;">
+                    <div class="form-group">
+                        <label>1공구 당일 매립량 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="phase1_used_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>2공구 당일 매립량 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="phase2_used_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>3공구 당일 매립량 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="phase3_used_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>4공구 당일 매립량 <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="phase4_used_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                </div>
+                <!-- 공구별 누적 매립량 -->
+                <div style="margin-top:12px;border:1px solid #fdba74;border-radius:8px;overflow:hidden;">
+                    <div style="background:#fff7ed;padding:7px 14px;font-size:11px;font-weight:700;color:#c2410c;border-bottom:1px solid #fdba74;">
+                        공구별 누적 매립량 (이전 누적 + 당일 입력)
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;text-align:center;">
+                        <div style="padding:10px 6px;border-right:1px solid #fed7aa;">
+                            <div style="font-size:10px;color:#64748b;margin-bottom:4px;">1공구</div>
+                            <div style="font-size:14px;font-weight:700;color:#ea580c;" id="cum-phase1">-</div>
+                            <div style="font-size:9px;color:#94a3b8;">톤</div>
+                        </div>
+                        <div style="padding:10px 6px;border-right:1px solid #fed7aa;">
+                            <div style="font-size:10px;color:#64748b;margin-bottom:4px;">2공구</div>
+                            <div style="font-size:14px;font-weight:700;color:#ea580c;" id="cum-phase2">-</div>
+                            <div style="font-size:9px;color:#94a3b8;">톤</div>
+                        </div>
+                        <div style="padding:10px 6px;border-right:1px solid #fed7aa;">
+                            <div style="font-size:10px;color:#64748b;margin-bottom:4px;">3공구</div>
+                            <div style="font-size:14px;font-weight:700;color:#ea580c;" id="cum-phase3">-</div>
+                            <div style="font-size:9px;color:#94a3b8;">톤</div>
+                        </div>
+                        <div style="padding:10px 6px;">
+                            <div style="font-size:10px;color:#64748b;margin-bottom:4px;">4공구</div>
+                            <div style="font-size:14px;font-weight:700;color:#ea580c;" id="cum-phase4">-</div>
+                            <div style="font-size:9px;color:#94a3b8;">톤</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // 공구별 누적 = 이전 누적 + 당일 입력값
-    [1,2,3,4].forEach((n, i) => {
-        const el = document.getElementById(`cum-phase${n}`);
-        if (el) {
-            const total = prevCumulative[i] + getVal(`phase${n}_used_m3`);
-            el.textContent = Math.round(total).toLocaleString('ko');
-        }
-    });
+        <!-- 섹션 3: 환경 모니터링 -->
+        <div class="card" style="display:flex;flex-direction:column;">
+            <div class="card-header">
+                <div class="icon">🌡</div>
+                환경 모니터링(당일)
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;flex:1;min-height:200px;">
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="form-group">
+                        <label>침출수 유입량(매립장->처리장) <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="leachate_generated_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>침출수 처리량(처리장->외부) <span class="unit">(톤)</span></label>
+                        <input type="text" inputmode="numeric" id="leachate_treated_m3" min="0" step="0.1" placeholder="0.0">
+                    </div>
+                </div>
+                <input type="hidden" id="gas_methane_ppm">
+                <div class="total-row push-bottom" style="margin-top:20px;">
+                    <span class="label">침출수 잔량</span>
+                    <span class="value"><span id="leachate-remaining">0.0</span> 톤</span>
+                </div>
+            </div>
+        </div>
 
-    // 일간 매출총액 자동합산
-    const revenueTotal = getVal('revenue_processing') + getVal('revenue_loading') + getVal('revenue_transport');
-    const revenueEl = document.getElementById('total-revenue');
-    if (revenueEl) revenueEl.textContent = revenueTotal.toLocaleString('ko');
+        <!-- 섹션 4: 일간 매출액 -->
+        <div class="card" style="display:flex;flex-direction:column;">
+            <div class="card-header">
+                <div class="icon">💰</div>
+                일간 매출액
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;flex:1;min-height:260px;">
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+                    <div class="form-group">
+                        <label>처리비 <span class="unit">(원, VAT별도)</span></label>
+                        <input type="text" inputmode="numeric" id="revenue_processing" min="0" step="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>상차비 <span class="unit">(원, VAT별도)</span></label>
+                        <input type="text" inputmode="numeric" id="revenue_loading" min="0" step="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>운반비 <span class="unit">(원, VAT별도)</span></label>
+                        <input type="text" inputmode="numeric" id="revenue_transport" min="0" step="1" placeholder="0">
+                    </div>
+                </div>
+                <div class="total-row push-bottom" style="margin-top:20px;">
+                    <span class="label">당일 매출총액</span>
+                    <span class="value"><span id="total-revenue">0</span> 원 <span style="font-size:11px;font-weight:400;color:#92400e;">(VAT별도)</span></span>
+                </div>
+            </div>
+        </div>
 
-    // 침출수 잔량 자동계산 (전날 잔량 + 유입량 - 처리량)
-    const leachateRemaining = prevLeachateRemaining + getVal('leachate_generated_m3') - getVal('leachate_treated_m3');
-    const leachateEl = document.getElementById('leachate-remaining');
-    if (leachateEl) leachateEl.textContent = leachateRemaining.toLocaleString('ko', {maximumFractionDigits: 1});
-    const hiddenEl = document.getElementById('gas_methane_ppm');
-    if (hiddenEl) hiddenEl.value = leachateRemaining;
-}
+        <!-- 섹션 5: 특이사항 (full-width) -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon">📝</div>
+                특이사항 메모
+            </div>
+            <div class="card-body">
+                <textarea id="memo" rows="4" placeholder="당일 특이사항, 민원, 장비 고장, 점검 사항 등을 자유롭게 기입하세요."
+                    style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;resize:vertical;line-height:1.7;"></textarea>
+            </div>
+        </div>
 
-// ---- 저장 ----
-async function saveData() {
-    const dateStr = document.getElementById('entry-date').value;
-    if (!dateStr) { showToast('날짜를 선택해 주세요.', 'error'); return; }
+    </div><!-- /.sections-grid -->
 
-    const saveBtn = document.getElementById('btn-save');
-    saveBtn.disabled = true;
-    saveBtn.textContent = '저장 중...';
+    <!-- 저장 버튼 -->
+    <div class="submit-bar">
+        <button class="btn btn-secondary" id="btn-clear">초기화</button>
+        <button class="btn btn-primary" id="btn-save" style="padding:12px 40px;font-size:15px;">
+            💾 저장하기
+        </button>
+    </div>
 
-    const payload = {};
-    FIELDS.filter(f => f !== 'memo').forEach(f => {
-        payload[f] = getVal(f);
-    });
-    payload.memo = document.getElementById('memo')?.value || '';
-    payload.entry_date = dateStr;
-    payload.entered_by = currentUser.id;
+</main>
 
-    try {
-        let error;
-        if (currentRecord) {
-            // 수정 (UPDATE)
-            ({ error } = await supabase
-                .from('daily_operations')
-                .update(payload)
-                .eq('id', currentRecord.id));
-        } else {
-            // 신규 (INSERT)
-            ({ error } = await supabase
-                .from('daily_operations')
-                .insert(payload));
-        }
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
-        if (error) throw error;
-
-        showToast(`${dateStr} 데이터가 저장되었습니다.`, 'success');
-        await loadDateData(dateStr); // 저장 후 재로드 (수정 모드로 전환)
-    } catch (e) {
-        showToast('저장 실패: ' + e.message, 'error');
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 저장하기';
-    }
-}
-
-// ---- Toast ----
-function showToast(msg, type = 'success') {
-    const t = document.getElementById('toast');
-    t.textContent = (type === 'success' ? '✓ ' : '✗ ') + msg;
-    t.className = `toast ${type} show`;
-    setTimeout(() => { t.classList.remove('show'); }, 3500);
-}
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/entry.js"></script>
+</body>
+</html>
