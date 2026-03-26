@@ -114,6 +114,10 @@ body {
     border-color: #f97316;
     box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
 }
+
+@media (min-width: 901px) {
+    .push-bottom { margin-top: auto !important; }
+}
 </style>
 </head>
 <body>
@@ -263,7 +267,7 @@ body {
                     </div>
                 </div>
                 <input type="hidden" id="gas_methane_ppm">
-                <div class="total-row" style="margin-top:20px;">
+                <div class="total-row push-bottom" style="margin-top:20px;">
                     <span class="label">침출수 잔량</span>
                     <span class="value"><span id="leachate-remaining">0.0</span> 톤</span>
                 </div>
@@ -291,7 +295,7 @@ body {
                         <input type="text" inputmode="numeric" id="revenue_transport" min="0" step="1" placeholder="0">
                     </div>
                 </div>
-                <div class="total-row" style="margin-top:20px;">
+                <div class="total-row push-bottom" style="margin-top:20px;">
                     <span class="label">당일 매출총액</span>
                     <span class="value"><span id="total-revenue">0</span> 원 <span style="font-size:11px;font-weight:400;color:#92400e;">(VAT별도)</span></span>
                 </div>
