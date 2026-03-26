@@ -7,6 +7,7 @@ let phaseConfigs = [];  // phase_config 테이블
 let charts = {};        // Chart.js 인스턴스 저장
 let currentPage = 1;
 const PAGE_SIZE = 10;
+let leachateStartBalance = 0; // 조회 시작일 이전 누적 침출수 잔량
 
 document.addEventListener('DOMContentLoaded', async () => {
     const session = await Auth.requireRole(['viewer']);
@@ -46,6 +47,19 @@ async function loadData() {
 
     const { data, error } = await query;
     if (error) { showToast('데이터 조회 실패: ' + error.message, 'error'); return; }
+
+    // 조회 시작일 이전의 누적 침출수 잔량 계산 (entry.js와 동일한 방식)
+    if (start) {
+        const { data: prevRows } = await supabase
+            .from('daily_operations')
+            .select('leachate_generated_m3, leachate_treated_m3')
+            .lt('entry_date', start);
+        leachateStartBalance = (prevRows || []).reduce(
+            (sum, row) => sum + (parseFloat(row.leachate_generated_m3) || 0) - (parseFloat(row.leachate_treated_m3) || 0), 0
+        );
+    } else {
+        leachateStartBalance = 0;
+    }
 
     // 개별 필드에서 합계 파생값 계산 (parseFloat으로 타입 강제 변환)
     const pf = v => parseFloat(v) || 0;
@@ -273,7 +287,7 @@ function renderCharts() {
     });
 
     // 4. 침출수 유입/처리량/잔량 (라인)
-    let leachateRunning = 0;
+    let leachateRunning = leachateStartBalance; // 시작일 이전 누적 잔량을 초기값으로
     const leachateRemainingData = allData.map(d => {
         leachateRunning += (d.leachate_generated_m3 || 0) - (d.leachate_treated_m3 || 0);
         return Math.round(leachateRunning);
